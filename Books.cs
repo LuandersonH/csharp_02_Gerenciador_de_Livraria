@@ -16,8 +16,8 @@ public class Books
     public string Title { get; set; } = string.Empty;
     public string Author { get; set; } = string.Empty;
     public decimal Price { get; set; }
-    public string Stock { get; set; } = string.Empty;
+    public int Stock { get; set; }
     public Genres Genre { get; set; }
     public DateOnly CreatedAt { get; set; }
-    public DateOnly UpdatedAt { get; set; }
+    public DateOnly? UpdatedAt { get; set; }
 }
