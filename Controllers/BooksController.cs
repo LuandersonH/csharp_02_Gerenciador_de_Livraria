@@ -63,7 +63,7 @@ public class BooksController : ControllerBase
     //GET em '/api/books/{id}' para Buscar um livro pelo ID.
     [HttpGet]
     [Route("{id}")]
-    [ProducesResponseType(typeof(User), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Books), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
     public IActionResult getBookById([FromBody] string req)
@@ -72,7 +72,7 @@ public class BooksController : ControllerBase
 
         if (!Guid.TryParse(req, out var guid))
         {
-            return BadRequest("ID inválid.");
+            return BadRequest("ID inválida.");
         }
 
         var book = booksList.SavedBooks.FirstOrDefault(bk => bk.Id == guid);
@@ -89,4 +89,44 @@ public class BooksController : ControllerBase
     //PUT em '/api/books/{id}' para Atualizar informações de um livro.
 
     //DELETE em '/api/books/{id}' para Excluir um livro da livraria.
+
+    [HttpPut]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [Route("{id}")]
+    public IActionResult updateBookByID([FromBody] RequestUpdateBookJson request, [FromRoute] string id)
+    {
+        if (!Guid.TryParse(id, out var idReq))
+        {
+            return BadRequest("ID inválida.");
+        }
+
+        var bookList = new BooksRepository();
+
+        var book = bookList.SavedBooks.Find(bk => bk.Id == idReq);
+
+        if (book == null)
+        {
+            return NotFound("Nenhum livro com esse ID foi encontrado!");
+        }
+
+        book.Stock = request.Stock;
+        book.Price = request.Price;
+        book.UpdatedAt = DateOnly.FromDateTime(DateTime.Now);
+
+        return NoContent();
+    }
+
+    [HttpDelete]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public IActionResult Delete()
+    {
+        return NoContent();
+    }
+
+    [HttpPut("change-password")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public IActionResult ChangePassword([FromBody] RequestChangeUserPasswordJson request)
+    {
+        return NoContent();
+    }
 }
