@@ -60,10 +60,31 @@ public class BooksController : ControllerBase
         return Ok(books);
     }
 
+    //GET em '/api/books/{id}' para Buscar um livro pelo ID.
+    [HttpGet]
     [Route("{id}")]
     [ProducesResponseType(typeof(User), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
-    //GET em '/api/books/{id}' para Buscar um livro pelo ID.
+    [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
+    public IActionResult getBookById([FromBody] string req)
+    {
+        var booksList = new BooksRepository();
+
+        if (!Guid.TryParse(req, out var guid))
+        {
+            return BadRequest("ID inválid.");
+        }
+
+        var book = booksList.SavedBooks.FirstOrDefault(bk => bk.Id == guid);
+
+        if (book == null)
+        {
+            return NotFound("Nenhum livro com esse ID foi encontrado!");
+        }
+                
+        return Ok(book);
+    }
+
 
     //PUT em '/api/books/{id}' para Atualizar informações de um livro.
 

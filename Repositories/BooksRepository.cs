@@ -2,11 +2,12 @@
 
 public class BooksRepository
 {
+    private const string V = "1";
     public List<Books> SavedBooks = new()
     {
         new Books
         {
-            Id = Guid.NewGuid(),
+            var id = Guid.Parse("d3c8f7a4-5b6e-4f2a-9c1d-123456789abc"),
             Author = "Author 1",
             Title = "Title 1",
             Genre = Genres.horror,
@@ -16,7 +17,7 @@ public class BooksRepository
         },
         new Books
         {
-            Id = Guid.NewGuid(),
+            var id = Guid.Parse("d3c8f7a4-5b6e-4f2a-9c1d-123456789def"),
             Author = "Author 2",
             Title = "Title 2",
             Genre = Genres.romance,
