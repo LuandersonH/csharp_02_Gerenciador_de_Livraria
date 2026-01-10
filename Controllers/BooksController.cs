@@ -1,9 +1,8 @@
 ﻿using Gerenciador_de_livraria.Repositories;
 using Gerenciador_de_livraria.Requests;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System.Runtime.InteropServices;
-using static System.Reflection.Metadata.BlobBuilder;
+using System;
+using System.Runtime.Intrinsics.X86;
 
 namespace Gerenciador_de_livraria.Controllers;
 
@@ -15,10 +14,23 @@ public class BooksController : ControllerBase
     //POST em '/api/books' para Criar um novo livro.
     [HttpPost]
     [ProducesResponseType(typeof(Books), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(Books), StatusCodes.Status409Conflict)]
     public IActionResult createBook([FromBody] RequestCreateBookJson req)
     {
-        var newBook = new
+        var booksList = new BooksRepository();
+
+        var bookTitle = booksList.SavedBooks
+                .Find(bk => bk.Title == req.Title.ToLower());
+        
+        var bookAuthor = booksList.SavedBooks
+                .Find(bk => bk.Author == req.Author.ToLower());
+
+        if (bookTitle != null) return Conflict("Já existe um livro com esse nome cadastrado!");
+        if (bookAuthor != null) return Conflict("Já existe um autor com esse nome cadastrado!");
+
+        var newBook = new Books
         {
+            Id = Guid.NewGuid(),
             Title = req.Title,
             Author = req.Author,
             Price = req.Price,
@@ -27,50 +39,43 @@ public class BooksController : ControllerBase
             CreatedAt = DateOnly.FromDateTime(DateTime.Now)
         };
 
+        booksList.SavedBooks.Add(newBook);
+
         return Created();
     }
 
     //GET em '/api/books' para Listar todos os livros (com filtros opcionais).
     [HttpGet]
-    [ProducesResponseType(typeof(Books), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public IActionResult getAllBooks([FromBody] string? req)
-    {
+    // typeof(IEnumerable<Books>) indica resposta com uma lista de livros.
+    [ProducesResponseType(typeof(IEnumerable<Books>), StatusCodes.Status200OK)] 
 
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public IActionResult getAllBooks([FromQuery] string? reqTitle)
+    {
         var booksList = new BooksRepository();
 
-        if (!string.IsNullOrWhiteSpace(req))
-         {
-            switch (req.ToLower()) 
-            {
-                case "author 1":
-                    var book1 = booksList.SavedBooks.Where(bk => bk.Author.Equals("author 1", StringComparison.OrdinalIgnoreCase)).ToList();
-                    return Ok(book1);
-                    
-                case "author 2":
-                    var book2 = booksList.SavedBooks.Where(bk => bk.Author.Equals("author 2", StringComparison.OrdinalIgnoreCase)).ToList();
-                    return Ok(book2);
-                
-                default:
-                    return NotFound();
-            }
+        if (!string.IsNullOrWhiteSpace(reqTitle))
+        {
+            var book = booksList.SavedBooks
+                .Where(bk => bk.Title.Equals(reqTitle, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            return book.Any() ? Ok(book) : NotFound("Nenhum livro com esse título foi encontrado!");
         }
 
-        var books = booksList.SavedBooks;
-        return Ok(books);
+        return Ok(booksList.SavedBooks);
     }
 
     //GET em '/api/books/{id}' para Buscar um livro pelo ID.
-    [HttpGet]
-    [Route("{id}")]
+    [HttpGet("{id}")]
     [ProducesResponseType(typeof(Books), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
-    public IActionResult getBookById([FromBody] string req)
+    public IActionResult getBookById([FromRoute] string id)
     {
         var booksList = new BooksRepository();
 
-        if (!Guid.TryParse(req, out var guid))
+        if (!Guid.TryParse(id, out var guid))
         {
             return BadRequest("ID inválida.");
         }
@@ -85,29 +90,24 @@ public class BooksController : ControllerBase
         return Ok(book);
     }
 
-
     //PUT em '/api/books/{id}' para Atualizar informações de um livro.
-
-    //DELETE em '/api/books/{id}' para Excluir um livro da livraria.
-
-    [HttpPut]
+    [HttpPut("{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [Route("{id}")]
-    public IActionResult updateBookByID([FromBody] RequestUpdateBookJson request, [FromRoute] string id)
+    [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
+    public IActionResult UpdateBookById([FromRoute] string id, [FromBody] RequestUpdateBookJson request)
     {
         if (!Guid.TryParse(id, out var idReq))
-        {
-            return BadRequest("ID inválida.");
-        }
+            return BadRequest("ID inválido.");
 
         var bookList = new BooksRepository();
-
         var book = bookList.SavedBooks.Find(bk => bk.Id == idReq);
 
         if (book == null)
-        {
             return NotFound("Nenhum livro com esse ID foi encontrado!");
-        }
+
+        if (request.Price < 0 || request.Stock < 0)
+            return BadRequest("Preço e estoque devem ser maiores ou iguais a 0.");
 
         book.Stock = request.Stock;
         book.Price = request.Price;
@@ -116,17 +116,26 @@ public class BooksController : ControllerBase
         return NoContent();
     }
 
-    [HttpDelete]
+
+    //DELETE em '/api/books/{id}' para Excluir um livro da livraria.
+    [HttpDelete("{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public IActionResult Delete()
+    [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
+    public IActionResult Delete([FromRoute] string id)
     {
+        if (!Guid.TryParse(id, out var idReq))
+            return BadRequest("ID inválido.");
+
+        var bookList = new BooksRepository();
+        var book = bookList.SavedBooks.Find(bk => bk.Id == idReq);
+
+        if (book == null)
+            return NotFound("Nenhum livro com esse ID foi encontrado!");
+
+        bookList.SavedBooks.Remove(book);
+
         return NoContent();
     }
 
-    [HttpPut("change-password")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public IActionResult ChangePassword([FromBody] RequestChangeUserPasswordJson request)
-    {
-        return NoContent();
-    }
 }
