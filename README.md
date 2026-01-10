@@ -1,4 +1,4 @@
-# API Gerenciadora de Livros
+# API Gerenciador de Livraria
 
 - Uma API REST em .NET para gerenciar livros em uma livraria, com operações CRUD completas. 
 - Desafio prático da formação em C# da Rocketseat.
